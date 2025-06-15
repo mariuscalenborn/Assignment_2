@@ -2,6 +2,7 @@ from dash import Dash, dcc, html, Input, Output
 import pandas as pd
 import plotly.express as px
 import json
+from copy import deepcopy
 
 # 📁 Daten vorbereiten
 df = pd.read_csv("tickets.csv")
@@ -78,7 +79,7 @@ app = Dash(__name__)
 
 app.layout = html.Div([
     html.Div(id='active-filters', style={'margin': '10px', 'fontWeight': 'bold'}),
-    html.Button("Filter zurücksetzen", id="reset-button", n_clicks=0, style={'marginBottom': '15px'}),
+    # html.Button("Filter zurücksetzen", id="reset-button", n_clicks=0, style={'marginBottom': '15px'}),
     dcc.Dropdown(
     id='agency-dropdown',
     options=[
@@ -151,18 +152,20 @@ def update_all(filter_data):
         filtered_df = filtered_df[filtered_df['issuing_agency'] == selected_agency]
         title_suffix += f" – Agentur: {selected_agency}"
 
+    filtered_for_avg = filtered_df.copy()
+
     if selected_weekdays:
         filtered_df = filtered_df[filtered_df['issue_datetime'].dt.day_name().isin(selected_weekdays)]
         title_suffix += f" – Wochentage: {', '.join(selected_weekdays)}"
 
+    filtered_for_rev = filtered_df.copy()
+
     if selected_violations:
-        filtered_for_rev = filtered_df.copy()
         filtered_df = filtered_df[filtered_df['violation_desc'].isin(selected_violations)]
         title_suffix  += " – Gefilterte Verstöße"
- 
-    filtered_for_rev = filtered_df.copy()
-    filtered_for_avg = filtered_df.copy()
-
+        filtered_for_avg = filtered_for_avg[filtered_for_avg['violation_desc'].isin(selected_violations)]
+    
+    
     if selected_zip:
         filtered_for_avg = filtered_for_avg[filtered_for_avg['zip_code'] == selected_zip]
     if time_range:
@@ -335,20 +338,23 @@ def update_filter_store(clickData, relayoutData, selectedData, agency, selectedW
 
     return store
 
-@app.callback(
-    Output("filter-store", "data", allow_duplicate=True),
-    Output("agency-dropdown", "value"),
-    Output("revenue_plot", "selectedData"),
-    Input("reset-button", "n_clicks"),
-    prevent_initial_call=True
-)
-def reset_filter(n_clicks):
-    return {
-        'zip': None,
-        'time_range': None,
-        'violations': [],
-        'agency': None
-    }, None, None
+# @app.callback(
+#     Output("filter-store", "data", allow_duplicate=True),
+#     Output("agency-dropdown", "value"),
+#     Output("revenue_plot", "selectedData"),
+#     Output("avg_tickets_per_day", "selectedData"),
+#     Input("reset-button", "n_clicks"),
+#     prevent_initial_call=True
+# )
+# def reset_filter(n_clicks):
+#     empty_store = {
+#         'zip': None,
+#         'time_range': None,
+#         'violations': [],
+#         'agency': None,
+#         'weekdays': []
+#     }
+#     return deepcopy(empty_store), None, None, None
 
 
 if __name__ == '__main__':
