@@ -2,7 +2,6 @@ from dash import Dash, dcc, html, Input, Output
 import pandas as pd
 import plotly.express as px
 import json
-from copy import deepcopy
 
 # 📁 Daten vorbereiten
 df = pd.read_csv("tickets.csv")
@@ -190,9 +189,40 @@ def update_all(filter_data):
         opacity=0.3,
         title='Anzahl Parkverstöße pro Stadtteil'
     )
-    fig_map.update_traces(hovertemplate="<b>%{customdata[0]}</b><br>Anzahl Verstöße: %{customdata[1]}<extra></extra>")
+    fig_map.update_traces(hovertemplate="<b>%{customdata[0]}</b><br>Anzahl Verstöße: %{customdata[1]}<extra></extra>",
+                          marker_line_color='black',
+                          marker_line_width=1.5)
+
     fig_map.update_layout(margin={"r":0,"t":40,"l":0,"b":0}, showlegend=False)
     fig_map.update_coloraxes(showscale=False)
+
+    if selected_zip:
+        zip_row = violation_counts[violation_counts['zip'] == selected_zip]
+        if not zip_row.empty:
+            highlight_df = pd.DataFrame({
+                'zip': zip_row['zip'].values,
+                'highlight': [1],
+                'neighborhoods': zip_row['neighborhoods'].values,
+                'violation_count': zip_row['violation_count'].values
+        })
+
+            highlight_layer = px.choropleth_mapbox(
+                highlight_df,
+                geojson=geojson_data,
+                locations='zip',
+                color='highlight',
+                featureidkey='properties.CODE',
+                color_continuous_scale=['red', 'red'],
+                custom_data=['neighborhoods', 'violation_count'],
+                opacity=0.8
+        )
+
+            highlight_layer.update_traces(
+                hovertemplate="<b>%{customdata[0]}</b><br>Anzahl Verstöße: %{customdata[1]}<extra></extra>"
+        )
+
+            fig_map.add_trace(highlight_layer.data[0])
+
 
     # 📊 Revenue Bar Chart (Brushed)
     valid_violations = filtered_for_rev[['violation_desc', 'fine']].dropna()
@@ -320,8 +350,13 @@ def update_filter_store(clickData, relayoutData, selectedData, agency, selectedW
 }
              
     if clickData and "points" in clickData:
-        store['zip'] = clickData["points"][0]["location"]
-
+        clicked_zip = clickData["points"][0]["location"]
+        current_zip = store.get('zip')
+        if current_zip == clicked_zip:
+            store['zip'] = None
+        else:
+            store['zip'] = clicked_zip
+            
     if relayoutData and "xaxis.range[0]" in relayoutData:
         store['time_range'] = [
             relayoutData["xaxis.range[0]"],
