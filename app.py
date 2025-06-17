@@ -1,4 +1,4 @@
-from dash import Dash, dcc, html, Input, Output
+from dash import Dash, dcc, html, Input, Output, State
 import pandas as pd
 import plotly.express as px
 import json
@@ -78,7 +78,6 @@ app = Dash(__name__)
 
 app.layout = html.Div([
     html.Div(id='active-filters', style={'margin': '10px', 'fontWeight': 'bold'}),
-    # html.Button("Filter zurücksetzen", id="reset-button", n_clicks=0, style={'marginBottom': '15px'}),
     dcc.Dropdown(
     id='agency-dropdown',
     options=[
@@ -99,12 +98,12 @@ app.layout = html.Div([
     html.H4('Anzahl Parkverstöße pro Stadtteil in Philadelphia'),
 
 html.Div([
-    # Linke Spalte: Karte
+    
     html.Div([
         dcc.Graph(id="map", style={'height': '100%', 'width': '100%'})
     ], style={'flex': '1', 'paddingRight': '15px'}),
 
-    # Rechte Spalte: gestapelte Plots
+    
     html.Div([
         dcc.Graph(id="revenue_plot", style={'height': '300px'}),
         dcc.Graph(id="time_series_plot", style={'height': '300px'}),
@@ -114,6 +113,7 @@ html.Div([
 ], style={'display': 'flex', 'height': '100%', 'gap': '10px'})
 ])
 
+#first initial plotting and update logik for new inputs by the user
 @app.callback(
     Output("map", "figure"),
     Output("revenue_plot", "figure"),
@@ -224,7 +224,7 @@ def update_all(filter_data):
             fig_map.add_trace(highlight_layer.data[0])
 
 
-    # 📊 Revenue Bar Chart (Brushed)
+    # Revenue Bar Chart per violation
     valid_violations = filtered_for_rev[['violation_desc', 'fine']].dropna()
     if not valid_violations.empty:
         top_violations = (
@@ -258,7 +258,7 @@ def update_all(filter_data):
     else:
         fig_rev = px.bar(title='Keine gültigen Verstöße gefunden' + title_suffix)
 
-    # 📈 Zeitreihe
+    # timeseries line chart 
     time_series = (
         filtered_df.groupby(filtered_df['issue_datetime'].dt.date)
         .size().reset_index(name='ticket_count')
@@ -269,7 +269,7 @@ def update_all(filter_data):
     )
     fig_time.update_layout(margin={"t": 40}, xaxis_title=None, yaxis_title=None)
 
-    # 💰 Gesamtrevenue
+    # Total revenue
     total_sum = filtered_df['fine'].sum()
     fig_total = px.scatter(
         x=[0], y=[0],
@@ -282,7 +282,7 @@ def update_all(filter_data):
         showlegend=False, margin={"t": 40}
     )
 
-    # 📊 Wochentage
+    # Weekday Avg
     filtered_for_avg['weekday'] = filtered_for_avg['issue_datetime'].dt.day_name()
     filtered_for_avg['date'] = filtered_for_avg['issue_datetime'].dt.date
     weekday_counts = filtered_for_avg.groupby(['date', 'weekday']).size().reset_index(name='daily_count')
@@ -372,25 +372,6 @@ def update_filter_store(clickData, relayoutData, selectedData, agency, selectedW
     store['agency'] = agency
 
     return store
-
-# @app.callback(
-#     Output("filter-store", "data", allow_duplicate=True),
-#     Output("agency-dropdown", "value"),
-#     Output("revenue_plot", "selectedData"),
-#     Output("avg_tickets_per_day", "selectedData"),
-#     Input("reset-button", "n_clicks"),
-#     prevent_initial_call=True
-# )
-# def reset_filter(n_clicks):
-#     empty_store = {
-#         'zip': None,
-#         'time_range': None,
-#         'violations': [],
-#         'agency': None,
-#         'weekdays': []
-#     }
-#     return deepcopy(empty_store), None, None, None
-
 
 if __name__ == '__main__':
     app.run(debug=True)
