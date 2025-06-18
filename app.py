@@ -1,9 +1,11 @@
-from dash import Dash, dcc, html, Input, Output, State
+from dash import Dash, dcc, html, Input, Output
 import pandas as pd
 import plotly.express as px
 import json
+from neighborhoods import zip_to_neighborhood
+import plotly.graph_objects as go
 
-# 📁 Daten vorbereiten
+# prepping data
 df = pd.read_csv("tickets.csv")
 with open("Zipcodes_Poly.geojson", "r") as f:
     geojson_data = json.load(f)
@@ -13,59 +15,6 @@ df['zip_code'] = df['zip_code'].astype(float).astype(int).astype(str).str.zfill(
 df['fine'] = pd.to_numeric(df['fine'], errors='coerce')
 df['issue_datetime'] = pd.to_datetime(df['issue_datetime'], utc=True)
 df['date'] = df['issue_datetime'].dt.date
-
-zip_to_neighborhood = {
-    "19102": ["Center City", "Rittenhouse", "Logan Square", "Penn Center", "Avenue of the Arts"],
-    "19103": ["Center City", "Avenue of the Arts", "Logan Circle", "Rittenhouse"],
-    "19104": ["University City", "West Philadelphia", "Belmont"],
-    "19106": ["Old City", "Society Hill", "Penn’s Landing"],
-    "19107": ["Center City North", "Chinatown"],
-    "19108": ["Fairmount", "Poplar"],
-    "19109": ["Center City", "Washington Square West"],
-    "19110": ["Northern Liberties", "Olde Kensington"],
-    "19111": ["Frankford", "Wissinoming"],
-    "19112": ["Mayfair"],
-    "19114": ["West Oak Lane", "Academy Gardens"],
-    "19115": ["Fox Chase", "Holmesburg"],
-    "19116": ["Holmesburg"],
-    "19118": ["Somerton", "Bustleton"],
-    "19119": ["Mount Airy"],
-    "19120": ["Germantown"],
-    "19121": ["Brewerytown", "Francisville"],
-    "19122": ["Kensington", "Fishtown"],
-    "19123": ["Spring Garden", "Old City West"],
-    "19124": ["Frankford"],
-    "19125": ["Northern Liberties", "Fishtown"],
-    "19126": ["East Falls"],
-    "19127": ["Manayunk", "Roxborough"],
-    "19128": ["Angora", "Overbrook"],
-    "19129": ["Powelton Village", "West Powelton"],
-    "19130": ["Fairmount", "Spring Garden", "Art Museum area"],
-    "19131": ["Overbrook", "Wynnefield", "Belmont"],
-    "19132": ["Tioga", "Nicetown", "Germantown"],
-    "19133": ["North Philadelphia East", "Strawberry Mansion"],
-    "19134": ["Port Richmond"],
-    "19135": ["Tacony"],
-    "19136": ["Holmesburg", "Torresdale"],
-    "19137": ["Bridesburg", "Port Richmond"],
-    "19138": ["Cedarbrook"],
-    "19139": ["Manayunk", "East Falls"],
-    "19140": ["Frankford"],
-    "19141": ["Mayfair"],
-    "19142": ["Pennypack", "Holmesburg"],
-    "19143": ["Pennsport", "South Philadelphia"],
-    "19144": ["Olney"],
-    "19145": ["Graduate Hospital", "Southwest Center City"],
-    "19146": ["West Philadelphia", "Graduate Hospital"],
-    "19147": ["Bella Vista", "Italian Market"],
-    "19148": ["Navy Yard", "South Philadelphia"],
-    "19149": ["East Germantown"],
-    "19150": ["Eastwick"],
-    "19151": ["Kingsessing"],
-    "19152": ["Airport area"],
-    "19153": ["Clearview"],
-    "19154": ["Bartram Village"]
-}
 
 def zip_to_label(z):
     return " / ".join(zip_to_neighborhood.get(z, [f"ZIP {z}"]))
@@ -77,41 +26,93 @@ violation_counts['neighborhoods'] = violation_counts['zip'].apply(zip_to_label)
 app = Dash(__name__)
 
 app.layout = html.Div([
-    html.Div(id='active-filters', style={'margin': '10px', 'fontWeight': 'bold'}),
-    dcc.Dropdown(
-    id='agency-dropdown',
-    options=[
-        {'label': agency, 'value': agency} 
-        for agency in sorted(df['issuing_agency'].dropna().unique())
-    ],
-    placeholder="Select Issuing Agency",
-    style={'width': '300px', 'marginBottom': '10px'}
-),
+    html.Div([
+    html.Div([
+        html.Div([
+            html.H1("Parking Violations of Philadelphia", style={
+                "margin": 0,
+                "fontSize": "36px",
+                "lineHeight": "1.2"
+            }),
+            html.Div("of 2017", style={
+                "color": "#6c757d",
+                "fontSize": "20px"
+            })
+        ], style={"flex": "1"}),
+
+        html.Div([
+            dcc.Dropdown(
+                id='agency-dropdown',
+                options=[{'label': agency, 'value': agency} for agency in sorted(df['issuing_agency'].dropna().unique())],
+                placeholder="Select Issuing Agency",
+                style={"width": "300px", "marginRight": "20px"}
+            ), 
+            html.Div(id='active-filters', style={"fontWeight": "bold", "whiteSpace": "nowrap"})
+        ], style={
+            "display": "flex",
+            "alignItems": "center",
+            "gap": "10px"
+        })
+    ], style={
+        "display": "flex",
+        "justifyContent": "space-between",
+        "alignItems": "center",
+        "marginBottom": "10px",
+        "flexWrap": "wrap"
+    })
+], style={"margin": "20px"})
+, 
+
 
     dcc.Store(id='filter-store', data={
         'zip': None,
         'time_range': None,
         'violations': [],
-        'agency': None, 
+        'agency': None,
         'weekdays': []
     }),
-    html.H4('Anzahl Parkverstöße pro Stadtteil in Philadelphia'),
 
-html.Div([
-    
     html.Div([
-        dcc.Graph(id="map", style={'height': '100%', 'width': '100%'})
-    ], style={'flex': '1', 'paddingRight': '15px'}),
+        html.Div([
+            dcc.Graph(id="map", style={
+                'flex': '1',
+                'width': '100%', 
+                'borderRadius': '10px', 
+                'boxShadow': '0 2px 6px rgba(0,0,0,0.1)', 
+                'padding': '5px', 
+                'backgroundColor': 'white'
+                })
+        ], style={
+            'flex': '1',
+            'minWidth': '300px', 
+            'display': 'flex', 
+            'flexDirection': 'column'
+            }),
 
-    
-    html.Div([
-        dcc.Graph(id="revenue_plot", style={'height': '300px'}),
-        dcc.Graph(id="time_series_plot", style={'height': '300px'}),
-        dcc.Graph(id="total_revenue", style={'height': '250px'}),
-        dcc.Graph(id="avg_tickets_per_day", style={'height': '250px'}),
-    ], style={'flex': '1'})
-], style={'display': 'flex', 'height': '100%', 'gap': '10px'})
-])
+        html.Div([
+            html.Div(dcc.Graph(id="avg_tickets_per_day", style={'height': '300px', 'width': '100%'}), style={'backgroundColor': 'white', 'borderRadius': '10px', 'padding': '10px', 'marginBottom': '20px'}),
+            html.Div(dcc.Graph(id="revenue_plot", style={'height': '300px', 'width': '100%'}), style={'backgroundColor': 'white', 'borderRadius': '10px', 'padding': '10px', 'marginBottom': '20px'}),
+            html.Div(dcc.Graph(id="time_series_plot", style={'height': '300px', 'width': '100%'}), style={'backgroundColor': 'white', 'borderRadius': '10px', 'padding': '10px', 'marginBottom': '20px'}),
+            html.Div([
+    html.Div(dcc.Graph(id="total_revenue", style={'height': '200px', 'width': '100%'}), style={
+        'backgroundColor': 'white',
+        'borderRadius': '10px',
+        'padding': '10px',
+        'flex': '1',
+        'minWidth': '200px'
+    }),
+    html.Div(dcc.Graph(id="total_count", style={'height': '200px', 'width': '100%'}), style={
+        'backgroundColor': 'white',
+        'borderRadius': '10px',
+        'padding': '10px',
+        'flex': '1',
+        'minWidth': '200px'
+    })
+], style={'display': 'flex', 'gap': '20px'})
+], style={'flex': '1', 'minWidth': '300px'})
+    ], style={'display': 'flex', 'flexWrap': 'wrap', 'margin': '20px', 'gap': '20px'})
+], style={'backgroundColor': '#e5e8ec', 'minHeight': '100vh', 'paddingBottom': '0px', 'paddingTop' : '5px'})
+
 
 #first initial plotting and update logik for new inputs by the user
 @app.callback(
@@ -120,9 +121,11 @@ html.Div([
     Output("time_series_plot", "figure"),
     Output("total_revenue", "figure"),
     Output("avg_tickets_per_day", "figure"),
+    Output("total_count", "figure"),          
     Output("active-filters", "children"),
     Input("filter-store", "data")
 )
+
 def update_all(filter_data):
     selected_zip = filter_data.get('zip')
     time_range = filter_data.get('time_range')
@@ -175,7 +178,7 @@ def update_all(filter_data):
         filtered_for_avg = filtered_for_avg[filtered_for_avg['violation_desc'].isin(selected_violations)]
     
 
-    # 🗺️ Choroplethenkarte bleibt unverändert
+    # Choropleth
     fig_map = px.choropleth_mapbox(
         violation_counts,
         geojson=geojson_data,
@@ -183,17 +186,22 @@ def update_all(filter_data):
         color='violation_count',
         featureidkey='properties.CODE',
         custom_data=['neighborhoods', 'violation_count'],
-        mapbox_style='open-street-map',
+        mapbox_style='carto-positron',
         zoom=10.5,
         center={"lat": 40.0, "lon": -75.129508},
-        opacity=0.3,
-        title='Anzahl Parkverstöße pro Stadtteil'
+        opacity=0.3
     )
     fig_map.update_traces(hovertemplate="<b>%{customdata[0]}</b><br>Anzahl Verstöße: %{customdata[1]}<extra></extra>",
                           marker_line_color='black',
                           marker_line_width=1.5)
 
-    fig_map.update_layout(margin={"r":0,"t":40,"l":0,"b":0}, showlegend=False)
+    fig_map.update_layout(margin={"r":0,"t":0,"l":0,"b":0},
+                           showlegend=False,
+                           paper_bgcolor='rgba(0,0,0,0)',
+                            plot_bgcolor='rgba(0,0,0,0)',
+                            autosize=True,
+                            height=None
+                           )
     fig_map.update_coloraxes(showscale=False)
 
     if selected_zip:
@@ -234,7 +242,7 @@ def update_all(filter_data):
             .head(5)
         )
         top_violations['color'] = top_violations['violation_desc'].apply(
-            lambda desc: 'red' if desc in selected_violations else 'lightgray'
+            lambda desc: 'red' if desc in selected_violations else '#636EFA'
         )
         fig_rev = px.bar(
             top_violations,
@@ -244,15 +252,37 @@ def update_all(filter_data):
             title='Top 5 Verstöße nach Revenue' + title_suffix,
             category_orders={'violation_desc': top_violations['violation_desc'].tolist()}
         )
-        fig_rev.update_layout(margin={"t": 40}, 
-                              xaxis_title=None, 
-                              yaxis_title=None, 
-                              showlegend=False,
-                              clickmode='event+select',
-                              xaxis_tickangle=-45)
+        fig_rev.update_layout(
+    margin={"t": 40}, 
+    xaxis_title=None, 
+    yaxis_title=None, 
+    showlegend=False,
+    clickmode='event+select',
+    xaxis_tickangle=-45,
+    plot_bgcolor='white',
+    paper_bgcolor='white',
+
+    xaxis=dict(
+        showline=True,
+        ticks='outside',
+        linecolor='LightGray',
+        linewidth=1,
+        showgrid=False,
+        zeroline=False,
+        showticklabels=True
+    ),
+    yaxis=dict(
+        showgrid=True,
+        gridcolor='LightGray',
+        gridwidth=1,
+        zeroline=False,
+        griddash='dash',
+        showticklabels=True
+    )
+)
+
         
-        fig_rev.update_traces(marker_line_width=2, 
-                              marker_line_color='black',
+        fig_rev.update_traces(marker_line_width=0, 
                               selector=dict(type='bar')
         )
     else:
@@ -267,20 +297,64 @@ def update_all(filter_data):
         time_series, x='issue_datetime', y='ticket_count',
         title='Tickets über Zeit' + title_suffix
     )
-    fig_time.update_layout(margin={"t": 40}, xaxis_title=None, yaxis_title=None)
+    fig_time.update_layout(margin={"t": 40}, xaxis_title=None, yaxis_title=None,plot_bgcolor='white',
+                              paper_bgcolor='white',
+                              xaxis=dict(
+        showline=True,
+        ticks='outside',
+        linecolor='LightGray',
+        linewidth=1,
+        showgrid=False,
+        zeroline=False,
+        showticklabels=True
+    ),
+    yaxis=dict(
+        showgrid=True,
+        gridcolor='LightGray',
+        gridwidth=1,
+        zeroline=False,
+        griddash='dash',
+        showticklabels=True
+    )
+                              )
 
     # Total revenue
     total_sum = filtered_df['fine'].sum()
-    fig_total = px.scatter(
-        x=[0], y=[0],
-        text=[f"${total_sum:,.0f}"],
-        title="Gesamte Strafsumme" + title_suffix
-    )
-    fig_total.update_traces(textfont_size=48, mode="text")
+    fig_total = go.Figure(go.Indicator(
+    mode="number",
+    value=total_sum,
+    number={
+        "prefix": "$",
+        "valueformat": ",.0f",
+        "font": {"size": 40}
+    },
+    title={"text": "Total Revenue", "font": {"size": 18}}
+))
     fig_total.update_layout(
-        xaxis=dict(visible=False), yaxis=dict(visible=False),
-        showlegend=False, margin={"t": 40}
-    )
+    margin={"t": 30, "b": 0, "l": 0, "r": 0},
+    paper_bgcolor="white",
+    height=200
+)
+
+    # Total ticket count
+    total_count = len(filtered_df)
+    fig_count = go.Figure(go.Indicator(
+    mode="number",
+    value=total_count,
+    number={
+        
+        "valueformat": ",.0f",
+        "font": {"size": 40}
+    },
+    title={"text": "Total Ticket Count", "font": {"size": 18}}
+))
+    fig_count.update_layout(
+    margin={"t": 30, "b": 0, "l": 0, "r": 0},
+    paper_bgcolor="white",
+    height=200
+)
+
+
 
     # Weekday Avg
     filtered_for_avg['weekday'] = filtered_for_avg['issue_datetime'].dt.day_name()
@@ -293,7 +367,7 @@ def update_all(filter_data):
         .reset_index(name='avg_tickets')
     )
     weekday_avg['color'] = weekday_avg['weekday'].apply(
-        lambda day: 'red' if day in selected_weekdays else 'lightgray'
+        lambda day: 'red' if day in selected_weekdays else '#636EFA'
     )
 
     fig_avg = px.bar(
@@ -309,28 +383,53 @@ def update_all(filter_data):
         xaxis_title=None, 
         yaxis_title=None,
         showlegend=False,
-        clickmode='event+select'
+        clickmode='event+select',plot_bgcolor='white',
+                              paper_bgcolor='white',
+
+    xaxis=dict(
+        showline=True,
+        ticks='outside',
+        linecolor='LightGray',
+        linewidth=1,
+        showgrid=False,
+        zeroline=False,
+        showticklabels=True
+    ),
+    yaxis=dict(
+        showgrid=True,
+        gridcolor='LightGray',
+        gridwidth=1,
+        zeroline=False,
+        griddash='dash',
+        showticklabels=True
+    )
     )
     
     fig_avg.update_traces(
-    marker_line_width=2,
-    marker_line_color='black',
+    marker_line_width=0,
+    
     selector=dict(type='bar')
     )
 
     # 🧾 Aktive Filteranzeige
     desc = []
     if selected_zip:
-        desc.append(f"ZIP: {selected_zip}")
-    if time_range:
-        desc.append(f"Zeitraum: {start.date()} bis {end.date()}")
-    if selected_violations:
-        desc.append(f"Verstöße: {', '.join(selected_violations)}")
-    if selected_agency:
-        desc.append(f"Agentur: {selected_agency}")
-    filter_text = " | ".join(desc) if desc else "Keine Filter aktiv"
+        neighborhoods = zip_to_neighborhood.get(selected_zip, [f"ZIP {selected_zip}"])
+        filter_text = " | ".join(neighborhoods)
+    else:
+        filter_text = "All Neighborhoods"
 
-    return fig_map, fig_rev, fig_time, fig_total, fig_avg, f"Aktive Filter: {filter_text}"
+
+    return (
+        fig_map,
+        fig_rev,
+        fig_time,
+        fig_total,
+        fig_avg,
+        fig_count,                      
+        f"Neighborhood: {filter_text}"
+    )
+
 
 @app.callback(
     Output("filter-store", "data"),
@@ -374,4 +473,4 @@ def update_filter_store(clickData, relayoutData, selectedData, agency, selectedW
     return store
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
