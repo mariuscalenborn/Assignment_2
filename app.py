@@ -10,22 +10,26 @@ df = pd.read_csv("tickets.csv")
 with open("Zipcodes_Poly.geojson", "r") as f:
     geojson_data = json.load(f)
 
+# Data cleaning and preprocessing
 df = df[df['zip_code'].notna()]
 df['zip_code'] = df['zip_code'].astype(float).astype(int).astype(str).str.zfill(5)
 df['fine'] = pd.to_numeric(df['fine'], errors='coerce')
 df['issue_datetime'] = pd.to_datetime(df['issue_datetime'], utc=True)
 df['date'] = df['issue_datetime'].dt.date
 
+#helper function to convert zip codes to neighborhood labels
 def zip_to_label(z):
     return " / ".join(zip_to_neighborhood.get(z, [f"ZIP {z}"]))
 
+# Count violations per zip code and create a DataFrame for the choropleth
 violation_counts = df['zip_code'].value_counts().reset_index()
 violation_counts.columns = ['zip', 'violation_count']
 violation_counts['neighborhoods'] = violation_counts['zip'].apply(zip_to_label)
 
 app = Dash(__name__)
-
+#==== Layout of the app ====
 app.layout = html.Div([
+    'Header with title and dropdown for agency selection',
     html.Div([
     html.Div([
         html.Div([
@@ -70,7 +74,7 @@ app.layout = html.Div([
         'agency': None,
         'weekdays': []
     }),
-
+    #map and plot layout
     html.Div([
         html.Div([
             dcc.Graph(id="map", style={
@@ -112,7 +116,7 @@ app.layout = html.Div([
     ], style={'display': 'flex', 'flexWrap': 'wrap', 'margin': '20px', 'gap': '20px'})
 ], style={'backgroundColor': '#e5e8ec', 'minHeight': '100vh', 'paddingBottom': '0px', 'paddingTop' : '5px'})
 
-
+#==== Callbacks ====
 #first initial plotting and update logik for new inputs by the user
 @app.callback(
     Output("map", "figure"),
@@ -134,6 +138,8 @@ def update_all(filter_data):
 
     filtered_df = df.copy()
     title_suffix = ""
+
+# Filter the DataFrame based on user inputs
 
     if selected_zip:
         filtered_df = filtered_df[filtered_df['zip_code'] == selected_zip]
@@ -189,7 +195,6 @@ def update_all(filter_data):
         zoom=10.5,
         center={"lat": 40.0, "lon": -75.129508},
         opacity=0.5,
-        # Orange
 
 
     )
@@ -206,6 +211,8 @@ def update_all(filter_data):
                            )
     fig_map.update_coloraxes(showscale=False)
 
+
+    #highlight selected zip code
     if selected_zip:
         zip_row = violation_counts[violation_counts['zip'] == selected_zip]
         if not zip_row.empty:
@@ -419,7 +426,7 @@ def update_all(filter_data):
     selector=dict(type='bar')
     )
 
-    # 🧾 Aktive Filteranzeige
+    # text for current neighborhood
     desc = []
     if selected_zip:
         neighborhoods = zip_to_neighborhood.get(selected_zip, [f"ZIP {selected_zip}"])
@@ -438,7 +445,7 @@ def update_all(filter_data):
         f"Neighborhood: {filter_text}"
     )
 
-
+# === Interactivity for the map and plots ===
 @app.callback(
     Output("filter-store", "data"),
     Input("map", "clickData"),
@@ -449,6 +456,7 @@ def update_all(filter_data):
     prevent_initial_call=True
 )
 def update_filter_store(clickData, relayoutData, selectedData, agency, selectedWeekdays):
+    # filter store to hold the current state of the filters
     store = {'zip': None, 
              'time_range': None, 
              'violations': [],
