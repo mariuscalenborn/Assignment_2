@@ -30,7 +30,7 @@ violation_counts['neighborhoods'] = violation_counts['zip'].apply(zip_to_label)
 app = Dash(__name__)
 #==== Layout of the app ====
 app.layout = html.Div([
-    'Header with title and dropdown for agency selection',
+    #Header with title and dropdown for agency selection'
     html.Div([
     html.Div([
         html.Div([
