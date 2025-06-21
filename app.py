@@ -4,6 +4,7 @@ import plotly.express as px
 import json
 from neighborhoods import zip_to_neighborhood
 import plotly.graph_objects as go
+import os
 
 # prepping data
 df = pd.read_csv("tickets.csv")
@@ -489,4 +490,6 @@ def update_filter_store(clickData, relayoutData, selectedData, agency, selectedW
     return store
 
 if __name__ == '__main__':
-    app.run(debug=False)
+    port = int(os.environ.get("PORT", 8050))  # Fallback für lokal
+    app.run(host="0.0.0.0", port=port, debug=False)
+
