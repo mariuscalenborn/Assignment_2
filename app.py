@@ -39,7 +39,6 @@ app.layout = html.Div([
                 "fontSize": "20px"
             })
         ], style={"flex": "1"}),
-
         html.Div([
             dcc.Dropdown(
                 id='agency-dropdown',
@@ -90,9 +89,9 @@ app.layout = html.Div([
             }),
 
         html.Div([
-            html.Div(dcc.Graph(id="avg_tickets_per_day", style={'height': '300px', 'width': '100%'}), style={'backgroundColor': 'white', 'borderRadius': '10px', 'padding': '10px', 'marginBottom': '20px'}),
-            html.Div(dcc.Graph(id="revenue_plot", style={'height': '300px', 'width': '100%'}), style={'backgroundColor': 'white', 'borderRadius': '10px', 'padding': '10px', 'marginBottom': '20px'}),
-            html.Div(dcc.Graph(id="time_series_plot", style={'height': '300px', 'width': '100%'}), style={'backgroundColor': 'white', 'borderRadius': '10px', 'padding': '10px', 'marginBottom': '20px'}),
+            html.Div(dcc.Graph(id="avg_tickets_per_day", style={'height': '300px', 'width': '100%'}), style={'backgroundColor': 'white', 'borderRadius': '10px', 'padding': '10px', 'marginBottom': '10px'}),
+            html.Div(dcc.Graph(id="revenue_plot", style={'height': '300px', 'width': '100%'}), style={'backgroundColor': 'white', 'borderRadius': '10px', 'padding': '10px', 'marginBottom': '10px'}),
+            html.Div(dcc.Graph(id="time_series_plot", style={'height': '300px', 'width': '100%'}), style={'backgroundColor': 'white', 'borderRadius': '10px', 'padding': '10px', 'marginBottom': '10px'}),
             html.Div([
     html.Div(dcc.Graph(id="total_revenue", style={'height': '200px', 'width': '100%'}), style={
         'backgroundColor': 'white',
@@ -108,7 +107,7 @@ app.layout = html.Div([
         'flex': '1',
         'minWidth': '200px'
     })
-], style={'display': 'flex', 'gap': '20px'})
+], style={'display': 'flex', 'gap': '10px'})
 ], style={'flex': '1', 'minWidth': '300px'})
     ], style={'display': 'flex', 'flexWrap': 'wrap', 'margin': '20px', 'gap': '20px'})
 ], style={'backgroundColor': '#e5e8ec', 'minHeight': '100vh', 'paddingBottom': '0px', 'paddingTop' : '5px'})
@@ -189,11 +188,14 @@ def update_all(filter_data):
         mapbox_style='carto-positron',
         zoom=10.5,
         center={"lat": 40.0, "lon": -75.129508},
-        opacity=0.3
+        opacity=0.5,
+        # Orange
+
+
     )
     fig_map.update_traces(hovertemplate="<b>%{customdata[0]}</b><br>Anzahl Verstöße: %{customdata[1]}<extra></extra>",
                           marker_line_color='black',
-                          marker_line_width=1.5)
+                          marker_line_width=1)
 
     fig_map.update_layout(margin={"r":0,"t":0,"l":0,"b":0},
                            showlegend=False,
@@ -249,7 +251,7 @@ def update_all(filter_data):
             x='violation_desc', y='fine',
             color='color',
             color_discrete_map="identity",
-            title='Top 5 Verstöße nach Revenue' + title_suffix,
+            title='Top 5 Violations by Revenue',
             category_orders={'violation_desc': top_violations['violation_desc'].tolist()}
         )
         fig_rev.update_layout(
@@ -258,7 +260,7 @@ def update_all(filter_data):
     yaxis_title=None, 
     showlegend=False,
     clickmode='event+select',
-    xaxis_tickangle=-45,
+    xaxis_tickangle=-30,
     plot_bgcolor='white',
     paper_bgcolor='white',
 
@@ -280,6 +282,9 @@ def update_all(filter_data):
         showticklabels=True
     )
 )
+        fig_rev.update_traces(
+            hovertemplate="<b>%{x}</b><br>Revenue: $%{y:,.0f}<extra></extra>"
+        )
 
         
         fig_rev.update_traces(marker_line_width=0, 
@@ -295,7 +300,7 @@ def update_all(filter_data):
     )
     fig_time = px.line(
         time_series, x='issue_datetime', y='ticket_count',
-        title='Tickets über Zeit' + title_suffix
+        title='Tickets over Time'
     )
     fig_time.update_layout(margin={"t": 40}, xaxis_title=None, yaxis_title=None,plot_bgcolor='white',
                               paper_bgcolor='white',
@@ -317,6 +322,8 @@ def update_all(filter_data):
         showticklabels=True
     )
                               )
+    fig_time.update_traces(
+        hovertemplate="<b>%{x}</b><br>Anzahl Tickets: %{y}<extra></extra>")
 
     # Total revenue
     total_sum = filtered_df['fine'].sum()
@@ -374,7 +381,7 @@ def update_all(filter_data):
         weekday_avg, x='weekday', y='avg_tickets',
         color='color',
         color_discrete_map="identity",
-        title='Ø Tickets pro Wochentag' + title_suffix,
+        title='Average tickets per day of the week',
         category_orders={'weekday': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']}
     )
 
@@ -406,6 +413,7 @@ def update_all(filter_data):
     )
     
     fig_avg.update_traces(
+    hovertemplate="<b>%{x}</b><br>Durchschnittliche Tickets: %{y}<extra></extra>",
     marker_line_width=0,
     
     selector=dict(type='bar')
