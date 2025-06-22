@@ -389,7 +389,7 @@ def update_all(filter_data):
         weekday_avg, x='weekday', y='avg_tickets',
         color='color',
         color_discrete_map="identity",
-        title='Average tickets per day of the week',
+        title='Average Tickets per Day of the Week',
         category_orders={'weekday': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']}
     )
 
