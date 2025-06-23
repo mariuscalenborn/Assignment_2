@@ -138,14 +138,14 @@ def update_all(filter_data):
     selected_weekdays = filter_data.get('weekdays', [])
 
     filtered_df = df.copy()
-    title_suffix = ""
+    
 
 # Filter the DataFrame based on user inputs
 
     if selected_zip:
         filtered_df = filtered_df[filtered_df['zip_code'] == selected_zip]
         neighborhoods = zip_to_neighborhood.get(selected_zip, [f"ZIP {selected_zip}"])
-        title_suffix += " – " + ", ".join(neighborhoods)
+        
 
     if time_range:
         start, end = pd.to_datetime(time_range[0]), pd.to_datetime(time_range[1])
@@ -154,23 +154,21 @@ def update_all(filter_data):
         if end.tzinfo is None:
             end = end.tz_localize("UTC")
         filtered_df = filtered_df[(filtered_df['issue_datetime'] >= start) & (filtered_df['issue_datetime'] <= end)]
-        title_suffix += f" – Zeitraum {start.date()} bis {end.date()}"
+        
 
     if selected_agency:
         filtered_df = filtered_df[filtered_df['issuing_agency'] == selected_agency]
-        title_suffix += f" – Agentur: {selected_agency}"
+        
 
     filtered_for_avg = filtered_df.copy()
 
     if selected_weekdays:
         filtered_df = filtered_df[filtered_df['issue_datetime'].dt.day_name().isin(selected_weekdays)]
-        title_suffix += f" – Wochentage: {', '.join(selected_weekdays)}"
-
+        
     filtered_for_rev = filtered_df.copy()
 
     if selected_violations:
         filtered_df = filtered_df[filtered_df['violation_desc'].isin(selected_violations)]
-        title_suffix  += " – Gefilterte Verstöße"
         filtered_for_avg = filtered_for_avg[filtered_for_avg['violation_desc'].isin(selected_violations)]
     
     
@@ -299,7 +297,7 @@ def update_all(filter_data):
                               selector=dict(type='bar')
         )
     else:
-        fig_rev = px.bar(title='Keine gültigen Verstöße gefunden' + title_suffix)
+        fig_rev = px.bar(title='no data available for selected violations',)
 
     # timeseries line chart 
     time_series = (
@@ -331,7 +329,7 @@ def update_all(filter_data):
     )
                               )
     fig_time.update_traces(
-        hovertemplate="<b>%{x}</b><br>Anzahl Tickets: %{y}<extra></extra>")
+        hovertemplate="<b>%{x}</b><br>Ticket Amount: %{y}<extra></extra>")
 
     # Total revenue
     total_sum = filtered_df['fine'].sum()
@@ -421,7 +419,7 @@ def update_all(filter_data):
     )
     
     fig_avg.update_traces(
-    hovertemplate="<b>%{x}</b><br>Durchschnittliche Tickets: %{y}<extra></extra>",
+    hovertemplate="<b>%{x}</b><br>average Ticket Amount: %{y}<extra></extra>",
     marker_line_width=0,
     
     selector=dict(type='bar')
@@ -490,6 +488,6 @@ def update_filter_store(clickData, relayoutData, selectedData, agency, selectedW
     return store
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 8050))  # Fallback für lokal
+    port = int(os.environ.get("PORT", 8050))  
     app.run(host="0.0.0.0", port=port, debug=False)
 
